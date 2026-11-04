@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from 'node:fs'
 import { join, dirname, basename, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { deflateSync } from 'node:zlib'
+import { deflateRawSync } from 'node:zlib'
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 
@@ -78,7 +78,7 @@ function buildZip(files) {
     const raw = readFileSync(full)
     const nameBuf = Buffer.from(rel, 'utf8')
     const isText = /\.(js|mjs|json|html|css|md|txt)$/i.test(rel)
-    const data = isText ? deflateSync(raw) : raw // 二进制（exe）不压缩，原样存
+    const data = isText ? deflateRawSync(raw) : raw // 二进制（exe）不压缩，原样存；文本用 raw deflate（ZIP method 8 要求，无 zlib 头）
     const method = isText ? 8 : 0
     const crc = crc32(raw)
     const [dTime, dDate] = (() => {
