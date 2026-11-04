@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>独角数卡机器人</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1b1f24;--muted:#66707a;--line:#e3e7ec;--brand:#0d9488;--ok:#15803d;--ok-bg:#e8f7ee;--err:#b42318;--err-bg:#fdecea;--warn:#92400e;--warn-bg:#fef3c7}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1418;--card:#161d23;--fg:#e6edf3;--muted:#93a1ae;--line:#243039;--ok:#4ade80;--ok-bg:#132e1f;--err:#f87171;--err-bg:#33191a;--warn:#fbbf24;--warn-bg:#33280d}}
+*{box-sizing:border-box}
+body{margin:0;padding:22px;background:var(--bg);color:var(--fg);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+.wrap{max-width:1000px;margin:0 auto;display:grid;gap:16px}
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.head h1{font-size:20px;margin:0;font-weight:700}
+.ver{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.spacer{flex:1}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{font-size:14px;margin:0 0 12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--fg);padding:8px 14px;font-weight:600;transition:.15s}
+button:hover{border-color:var(--brand);color:var(--brand)}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+button.primary:hover{filter:brightness(1.08);color:#fff}
+button:disabled{opacity:.55;cursor:not-allowed}
+button.sm{padding:5px 10px;font-size:12.5px}
+input,select,textarea{width:100%;padding:8px 11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit}
+label{color:var(--muted);font-size:13px;display:block;margin-bottom:4px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:140px 1fr;gap:10px 14px;align-items:center}
+.hint{grid-column:1/-1;color:var(--muted);font-size:12px;margin-top:-6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:600;background:var(--line);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--err-bg);color:var(--err)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--ok-bg);color:var(--ok);font-weight:600}
+.state.bad{background:var(--err-bg);color:var(--err)}
+.state.warn{background:var(--warn-bg);color:var(--warn)}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.msg{font-size:13px}
+.msg.ok{color:var(--ok)}
+.msg.bad{color:var(--err)}
+.logs{font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap}
+.shoprow{display:grid;grid-template-columns:1fr 2fr 80px 70px;gap:8px;align-items:center;margin-bottom:8px}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--fg)}
+.chk input{width:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>独角数卡机器人</h1>
+    <span class="ver" id="ver"></span>
+    <span class="state warn" id="conn">连接中…</span>
+    <div class="spacer"></div>
+    <button class="sm" id="refresh">刷新</button>
+  </div>
+
+  <div class="card">
+    <h2>运行状态</h2>
+    <div class="row" id="statusRow"><span class="empty">读取中…</span></div>
+    <div id="botsBox" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2>商城配置</h2>
+    <div id="shopsBox"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="sm" id="addShop">+ 添加商城</button>
+      <button class="primary sm" id="saveShops">保存商城</button>
+      <span class="msg" id="shopMsg"></span>
+    </div>
+    <div class="hint" style="margin-top:8px">地址填商城根地址，例如 http://127.0.0.1:8080（不要带 /api/v1）。保存后可点「测试」验证连通性。</div>
+  </div>
+
+  <div class="card">
+    <h2>机器人设置</h2>
+    <div class="grid">
+      <label>启用插件</label>
+      <div class="chk"><input type="checkbox" id="enabled"><span>收到指令时响应</span></div>
+
+      <label>指令前缀</label>
+      <div><input id="commandPrefix" placeholder="/dj,独角"></div>
+      <div class="hint">多个前缀用逗号分隔</div>
+
+      <label>群聊需 @ 机器人</label>
+      <div class="chk"><input type="checkbox" id="replyToGroup"><span>群消息仅处理 @ 或带前缀的内容</span></div>
+
+      <label>商品列表条数</label>
+      <div><input id="maxProductsInList" type="number" min="1" max="50"></div>
+
+      <label>指令冷却(秒)</label>
+      <div><input id="cooldownSeconds" type="number" min="0" max="60"></div>
+
+      <label>自检间隔(分钟)</label>
+      <div><input id="intervalMinutes" type="number" min="1" max="240"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary sm" id="saveOptions">保存设置</button>
+      <span class="msg" id="optMsg"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>商品预览（当前商城）</h2>
+    <div class="row" style="margin-bottom:10px">
+      <input id="keyword" placeholder="输入关键词搜索，留空看全部" style="flex:1;min-width:200px">
+      <button class="sm" id="loadProducts">加载</button>
+    </div>
+    <div id="productsBox"><span class="empty">点击「加载」读取商品</span></div>
+  </div>
+
+  <div class="card">
+    <h2>发送测试消息</h2>
+    <div class="row">
+      <select id="targetType" style="width:120px"><option value="group">群聊</option><option value="private">私聊</option></select>
+      <input id="targetId" placeholder="群号 / QQ 号" style="flex:1;min-width:160px">
+      <input id="testText" placeholder="消息内容" value="独角数卡机器人测试消息" style="flex:2;min-width:180px">
+      <button class="sm" id="sendTest">发送</button>
+    </div>
+    <div class="msg" id="testMsg" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>最近日志</h2>
+    <div class="logs" id="logs"></div>
+  </div>
+</div>
+
+<script>
+let state = { data: null }
+const $ = id => document.getElementById(id)
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+
+// 框架通过 /<plugin-id>/web/ 反代到插件管理端，必须基于当前路径拼接口地址
+var BASE = location.pathname.replace(/\/+$/, '')
+function apiUrl(p) { return (BASE && p.charAt(0) === '/') ? BASE + p : p }
+function api(path, opts) {
+  return fetch(apiUrl(path), Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, opts || {}))
+    .then(r => r.text().then(txt => {
+      let j
+      try { j = JSON.parse(txt) } catch { throw new Error('返回内容不是 JSON：' + txt.slice(0, 80)) }
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status))
+      return j
+    }))
+}
+function setConn(text, cls) { const el = $('conn'); el.textContent = text; el.className = 'state ' + (cls || '') }
+
+function paint(d) {
+  state.data = d
+  $('ver').textContent = 'v' + (d.version || '') + (d.platform ? ' · ' + d.platform : '')
+  if (!d.connected) setConn('框架未连接', 'bad')
+  else setConn('运行中', '')
+
+  const ev = d.events || {}
+  $('statusRow').innerHTML = [
+    `<span class="pill ${d.connected ? 'ok' : 'bad'}">IPC ${d.connected ? '已连接' : '断开'}</span>`,
+    `<span class="pill">商城 ${d.shops ? d.shops.length : 0} 个</span>`,
+    `<span class="pill">已绑定用户 ${d.boundUsers || 0}</span>`,
+    `<span class="pill">事件 ${ev.count || 0}</span>`,
+    ev.lastAt ? `<span class="pill">最近事件 ${new Date(ev.lastAt).toLocaleString('zh-CN', { hour12: false })}</span>` : '',
+  ].join(' ')
+
+  const bots = d.bots || []
+  $('botsBox').innerHTML = bots.length
+    ? '<table><thead><tr><th>QQ</th><th>昵称</th><th>平台</th><th>状态</th></tr></thead><tbody>' +
+      bots.map(b => `<tr><td class="mono">${esc(b.self_id)}</td><td>${esc(b.nickname || '-')}</td><td>${esc(b.platform || '-')}</td><td><span class="pill ${b.online ? 'ok' : ''}">${b.online ? '在线' : '离线'}</span></td></tr>`).join('') +
+      '</tbody></table>'
+    : '<span class="empty">框架内暂无账号</span>'
+
+  // 商城
+  if (!state.editingShops) {
+    state.editingShops = (d.shops || []).map(s => ({ label: s.label, baseUrl: s.baseUrl, enabled: s.enabled !== false }))
+    if (!state.editingShops.length) state.editingShops = [{ label: '主站', baseUrl: '', enabled: true }]
+  }
+  renderShops(d.activeShop || 0)
+
+  // 设置
+  const o = d.options || {}
+  $('enabled').checked = o.enabled !== false
+  $('replyToGroup').checked = o.replyToGroup !== false
+  $('commandPrefix').value = Array.isArray(o.commandPrefix) ? o.commandPrefix.join(',') : String(o.commandPrefix || '/dj,独角')
+  $('maxProductsInList').value = o.maxProducts || 15
+  $('cooldownSeconds').value = o.cooldownSeconds ?? 3
+  $('intervalMinutes').value = o.intervalMinutes || 10
+
+  $('logs').textContent = (d.logs || []).join('\n') || '（暂无日志）'
+}
+
+function renderShops(activeIdx) {
+  const list = state.editingShops || []
+  $('shopsBox').innerHTML = list.map((s, i) => `
+    <div class="shoprow">
+      <input value="${esc(s.label)}" data-i="${i}" data-k="label" placeholder="名称">
+      <input value="${esc(s.baseUrl)}" data-i="${i}" data-k="baseUrl" placeholder="请填写商城地址，如 http://127.0.0.1:8080">
+      <label class="chk"><input type="checkbox" data-i="${i}" data-k="enabled" ${s.enabled !== false ? 'checked' : ''}><span>启用</span></label>
+      ${s.baseUrl ? '' : '<span style="color:var(--err);font-size:12px">← 地址为空，保存后将被忽略</span>'}
+      <div class="row">
+        <button class="sm" data-test="${i}">测试</button>
+        <button class="sm" data-del="${i}">删</button>
+      </div>
+    </div>`).join('') + (list.length > 1
+      ? `<div class="hint">当前使用第 ${activeIdx + 1} 个商城作为默认目标</div>` : '')
+}
+
+$('shopsBox').addEventListener('input', e => {
+  const t = e.target
+  if (t.dataset.k) {
+    const i = Number(t.dataset.i)
+    state.editingShops[i][t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value
+  }
+})
+$('shopsBox').addEventListener('click', async e => {
+  const del = e.target.dataset.del
+  const test = e.target.dataset.test
+  if (del != null) {
+    state.editingShops.splice(Number(del), 1)
+    if (!state.editingShops.length) state.editingShops = [{ label: '主站', baseUrl: '', enabled: true }]
+    renderShops(state.data?.activeShop || 0)
+  }
+  if (test != null) {
+    const s = state.editingShops[Number(test)]
+    const m = $('shopMsg'); m.className = 'msg'; m.textContent = '测试中…'
+    try {
+      const r = await api('/api/shops/test', { method: 'POST', body: JSON.stringify({ baseUrl: s.baseUrl }) })
+      m.className = 'msg ' + (r.ok ? 'ok' : 'bad')
+      m.textContent = r.ok ? r.message : ('失败：' + r.error)
+    } catch (err) { m.className = 'msg bad'; m.textContent = '失败：' + err.message }
+  }
+})
+$('addShop').onclick = () => {
+  state.editingShops = state.editingShops || []
+  if (state.editingShops.length >= 5) return
+  state.editingShops.push({ label: '商城' + (state.editingShops.length + 1), baseUrl: '', enabled: true })
+  renderShops(state.data?.activeShop || 0)
+}
+$('saveShops').onclick = async () => {
+  const m = $('shopMsg'); m.className = 'msg'; m.textContent = '保存中…'
+  const shops = (state.editingShops || []).filter(s => String(s.baseUrl || '').trim())
+  if (!shops.length) {
+    m.className = 'msg bad'; m.textContent = '请至少填写一个商城地址（不能为空）'
+    return
+  }
+  try {
+    const r = await api('/api/shops', { method: 'POST', body: JSON.stringify({ shops, activeShop: state.data?.activeShop || 0 }) })
+    state.editingShops = null
+    paint(r); m.className = 'msg ok'; m.textContent = '已保存'
+  } catch (e) { m.className = 'msg bad'; m.textContent = '保存失败：' + e.message }
+}
+$('saveOptions').onclick = async () => {
+  const m = $('optMsg'); m.className = 'msg'; m.textContent = '保存中…'
+  const body = {
+    enabled: $('enabled').checked,
+    replyToGroup: $('replyToGroup').checked,
+    commandPrefix: $('commandPrefix').value,
+    maxProducts: Number($('maxProductsInList').value) || 15,
+    cooldownSeconds: Number($('cooldownSeconds').value),
+    intervalMinutes: Number($('intervalMinutes').value) || 10,
+  }
+  try {
+    const r = await api('/api/options', { method: 'POST', body: JSON.stringify(body) })
+    paint(r); m.className = 'msg ok'; m.textContent = '已保存并生效'
+  } catch (e) { m.className = 'msg bad'; m.textContent = '保存失败：' + e.message }
+}
+$('loadProducts').onclick = async () => {
+  const box = $('productsBox'); box.innerHTML = '<span class="empty">读取中…</span>'
+  try {
+    const kw = encodeURIComponent($('keyword').value.trim())
+    const r = await api('/api/shops/products?page=1&keyword=' + kw)
+    const items = r.items || []
+    if (!items.length) { box.innerHTML = '<span class="empty">没有商品</span>'; return }
+    box.innerHTML = '<table><thead><tr><th>#</th><th>商品</th><th>价格</th><th>库存</th></tr></thead><tbody>' +
+      items.map((p, i) => `<tr><td>${i + 1}</td><td>${esc(p.title || p.name)}</td><td>${fmt(p.price ?? p.min_price)}</td><td>${esc(p.stock ?? p.total_stock ?? '-')}</td></tr>`).join('') +
+      '</tbody></table>'
+  } catch (e) { box.innerHTML = '<span class="empty">读取失败：' + esc(e.message) + '</span>' }
+}
+function fmt(v) { const n = Number(v); return isFinite(n) ? '¥' + (n / 100).toFixed(2) : String(v ?? '') }
+
+$('sendTest').onclick = async () => {
+  const m = $('testMsg'); m.className = 'msg'; m.textContent = '发送中…'
+  try {
+    const r = await api('/api/test/reply', { method: 'POST', body: JSON.stringify({
+      targetType: $('targetType').value, targetId: Number($('targetId').value), text: $('testText').value,
+    }) })
+    m.className = 'msg ' + (r.ok ? 'ok' : 'bad'); m.textContent = r.ok ? r.message : ('失败：' + r.error)
+  } catch (e) { m.className = 'msg bad'; m.textContent = '失败：' + e.message }
+}
+$('refresh').onclick = () => reload()
+
+function reload() {
+  return api('/api/state').then(paint).catch(e => setConn(e.message, 'bad'))
+}
+reload()
+setInterval(() => { if (!state.editingShops) reload() }, 8000)
+</script>
+</body>
+</html>
