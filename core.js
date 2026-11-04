@@ -5,7 +5,7 @@ import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto'
 import { join } from 'node:path'
 
 export const PLUGIN_ID = 'dujiao-shop'
-export const VERSION = '2.2.0'
+export const VERSION = '2.2.1'
 export const ACTIONS = Object.freeze([
   'get_plugin_context',
   'get_bot_list',
@@ -323,10 +323,17 @@ const STATUS_TEXT = {
 export function createAssistant({ api, dataPath, logger, shopOverride }) {
   const store = createStore(dataPath)
   const shopApi = shopOverride || defaultShopApi
+  // 内存日志环：管理端「最近日志」读取
+  const logRing = []
+  const pushLog = (level, m) => {
+    const line = '[' + new Date().toISOString() + '] [' + level.toUpperCase() + '] ' + String(m ?? '')
+    logRing.push(line)
+    if (logRing.length > 200) logRing.shift()
+  }
   const log = {
-    info: m => logger?.info?.(m),
-    warn: m => logger?.warn?.(m),
-    error: m => logger?.error?.(m),
+    info: m => { pushLog('info', m); logger?.info?.(m) },
+    warn: m => { pushLog('warn', m); logger?.warn?.(m) },
+    error: m => { pushLog('error', m); logger?.error?.(m) },
   }
 
   const state = {
@@ -609,6 +616,7 @@ export function createAssistant({ api, dataPath, logger, shopOverride }) {
     const orderNo = created?.order_no || ''
     if (!orderNo) return '下单失败：商城未返回订单号。'
     state.stats.orders++
+    log.info(`下单成功 ${orderNo}（${email}）`)
 
     // 取支付链接
     let payUrl = ''
@@ -804,6 +812,9 @@ export function createAssistant({ api, dataPath, logger, shopOverride }) {
     const command = stripPrefix(text)
     if (command === null) return
 
+    // 记录收到指令
+    log.info(`收到指令 [${selfId}] ${command.slice(0, 60)}`)
+
     // protocol_id 必须来自账号实例，0 是有效值
     const evProtocol = protocolIdOf(ev)
     let protocolId
@@ -869,6 +880,7 @@ export function createAssistant({ api, dataPath, logger, shopOverride }) {
           platform: b.platform || '',
           online: onlineRow(b),
         })),
+        logs: logRing.slice(-80),
       }
     },
     updateOptions: patch => { saveOptions({ ...getOptions(), ...patch }); return getOptions() },

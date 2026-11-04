@@ -3,10 +3,10 @@
   "framework_api": "3.0.0",
   "plugin_id": "dujiao-shop",
   "name": "独角数卡商城助手",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "min_framework": "3.0.0",
   "author": "local",
-  "notes": "v2.2.0：下单后自动轮询订单状态最长5分钟，支付成功立即返回订单结果与卡密，超时提示支付超时；支付链接先发一条消息再轮询，轮询间隔/超时可用 DJ_POLL_INTERVAL_MS / DJ_POLL_TIMEOUT_MS 覆盖。",
+  "notes": "v2.2.1：修复管理端「最近日志」栏不显示——增加内存日志环并在 snapshot 返回 logs；补充收到指令、下单成功等关键日志。",
   "runtime": {
     "entry": "bin/node-win-x64.exe",
     "args": [
