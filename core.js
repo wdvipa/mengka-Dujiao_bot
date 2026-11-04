@@ -5,7 +5,7 @@ import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto'
 import { join } from 'node:path'
 
 export const PLUGIN_ID = 'dujiao-shop'
-export const VERSION = '2.3.0'
+export const VERSION = '2.4.0'
 export const ACTIONS = Object.freeze([
   'get_plugin_context',
   'get_bot_list',

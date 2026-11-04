@@ -3,10 +3,10 @@
   "framework_api": "3.0.0",
   "plugin_id": "dujiao-shop",
   "name": "独角数卡商城助手",
-  "version": "2.3.0",
-  "min_framework": "3.0.0",
+  "version": "2.4.0",
+  "min_framework": "3.0.7",
   "author": "local",
-  "notes": "v2.3.0：打包压缩 exe 减小体积（89MB→34MB）、补充 openssl.cnf 沙箱运行环境、修复管理端最近日志栏不显示、打包脚本改用 raw deflate 修复 zip 损坏。",
+  "notes": "v2.4.0：适配 Windows amd64 / Linux amd64 / Linux arm64 三平台；min_framework 提升到 3.0.7；Linux 入口带 0755 权限位。",
   "runtime": {
     "entry": "bin/node-win-x64.exe",
     "args": [

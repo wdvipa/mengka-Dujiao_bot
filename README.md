@@ -3,8 +3,11 @@
 把 [独角数卡](https://github.com/)（Dujiao-Next）商城接入 QQ 的萌卡 NT 插件。用户直接在 QQ 里逛商城、下单、支付、查卡密，无需打开网页。
 
 - **插件 ID**：`dujiao-shop`
-- **框架要求**：萌卡 NT ≥ 3.0.0（native-ipc-v1 插件）
-- **运行形态**：Windows 原生 IPC 插件（自带 Node 运行时，不依赖宿主机 Node.js）
+- **框架要求**：萌卡 NT ≥ 3.0.0（native-ipc-v1 插件）；Windows 版需 ≥ 3.0.7
+- **运行形态**：原生 IPC 插件，自带 Node 运行时，不依赖宿主机 Node.js
+- **支持平台**：Windows amd64 / Linux amd64 / Linux arm64
+  - Windows：框架直接运行 PE 可执行文件，无需 Docker
+  - Linux：框架使用 **Docker 容器** 运行，需先在「插件服务 → IPC 导入」检测并准备 Docker 环境
 
 ## 功能
 
@@ -50,21 +53,34 @@
 
 ## 打包
 
-在 `源码` 目录执行：
+先把对应平台的 Node 运行时放到 `bin/` 下：
+
+| 平台 | 文件 | 说明 |
+| --- | --- | --- |
+| Windows amd64 | `bin/node-win-x64.exe` | PE 可执行文件 |
+| Linux amd64 | `bin/node-linux-x64` | ELF x86-64 |
+| Linux arm64 | `bin/node-linux-arm64` | ELF AArch64 |
+
+然后执行：
 
 ```bash
-node build.js
+node build.js                # 打全部三平台
+node build.js win            # 只打 Windows
+node build.js linux-amd64    # 只打 Linux amd64
+node build.js linux-arm64    # 只打 Linux arm64
 ```
 
-输出到上一级目录：`独角数卡商城助手-<版本>-windows-amd64.zip`。
+输出到上一级目录：
 
-也可以指定输出文件名：
+- `独角数卡商城助手-<版本>-windows-amd64.zip`
+- `独角数卡商城助手-<版本>-linux-amd64.zip`
+- `独角数卡商城助手-<版本>-linux-arm64.zip`
 
-```bash
-node build.js 自定义名字.zip
-```
+每个包只包含本平台的可执行文件，清单里的 `runtime.entry` 会自动指向对应文件；Linux 入口写入 0755 权限位。
 
-打包会排除 `.git`、`data`（运行数据）、`build.js`、`.gitignore`、`README.md` 和测试文件，但会包含 `bin/` 运行时。
+打包会排除 `.git`、`data`（运行数据）、`build.js`、`.gitignore`、`README.md` 和测试文件。
+
+> 注意：更新包版本号必须高于已安装版本，否则框架会拒绝导入。
 
 ## 安装到萌卡 NT
 
