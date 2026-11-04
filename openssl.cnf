@@ -1,0 +1,14 @@
+# Minimal OpenSSL configuration for sandboxed plugin runtime.
+# The mengka plugin sandbox (Landlock) denies read access to
+# /etc/ssl/openssl.cnf, which makes node exit fatally at startup.
+# This file is passed via --openssl-config so node never touches
+# the system config. Only the default provider is activated.
+openssl_conf = openssl_init
+
+[openssl_init]
+providers = provider_sect
+
+[provider_sect]
+default = default_sect
+
+[default_sect]

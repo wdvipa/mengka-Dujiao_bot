@@ -77,9 +77,9 @@ function buildZip(files) {
   for (const { full, rel } of files) {
     const raw = readFileSync(full)
     const nameBuf = Buffer.from(rel, 'utf8')
-    const isText = /\.(js|mjs|json|html|css|md|txt)$/i.test(rel)
-    const data = isText ? deflateRawSync(raw) : raw // 二进制（exe）不压缩，原样存；文本用 raw deflate（ZIP method 8 要求，无 zlib 头）
-    const method = isText ? 8 : 0
+    // 文本与 .exe 都用 raw deflate 压缩（exe 是重复度高的二进制，压缩后约省 60%）
+    const data = deflateRawSync(raw, { level: 6 })
+    const method = 8
     const crc = crc32(raw)
     const [dTime, dDate] = (() => {
       const d = new Date(statSync(full).mtimeMs)
